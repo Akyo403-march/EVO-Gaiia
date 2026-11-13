@@ -1,0 +1,48 @@
+{
+  "id": "sobre",
+  "name": "Sobre",
+  "dpi": 300,
+  "page": {
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "widthPt": 612,
+    "heightPt": 792,
+    "widthPx": 2550,
+    "heightPx": 3300
+  },
+  "piece": {
+    "widthPx": 1024,
+    "heightPx": 906,
+    "mask": "mask-alpha.png",
+    "map": "mapa_de_recorte.png"
+  },
+  "pageMap": "mapa_de_ajuste_imagen.png",
+  "slotsPerPage": 2,
+  "slots": [
+    {
+      "centerX": 840.73,
+      "centerY": 780.14,
+      "rotationDeg": -45,
+      "scale": 1.9627
+    },
+    {
+      "centerX": 1676.99,
+      "centerY": 2369.51,
+      "rotationDeg": 45,
+      "scale": 1.9627
+    }
+  ],
+  "logo": {
+    "widthPx": 256,
+    "anchor": "bottom-center",
+    "offsetYPx": 56
+  },
+  "previewOverlay": "#00FFFF",
+  "kind": "carta",
+  "features": {
+    "logo": true,
+    "frame": false,
+    "text": true
+  },
+  "coverageUnderlay": "#FF00AA"
+}

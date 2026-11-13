@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>EVO-Gaiia</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Dancing+Script:wght@400;700&family=IBM+Plex+Sans:wght@400;700&family=IBM+Plex+Serif:wght@400;700&family=Jost:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/app.css?v=15" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">EVO-<span>Gaiia</span></div>
+      <span class="hint" id="headerHint">Cartas · Postales</span>
+    </header>
+
+    <!-- HOME -->
+    <section id="view-home" class="view home active">
+      <h1>EVO-Gaiia</h1>
+      <p class="lead">Dos flujos separados: cartas (sobre) y postales. Edita, guarda PNG y arma el PDF de cada uno.</p>
+      <div class="home-blocks">
+        <div class="home-block">
+          <h2>Cartas</h2>
+          <p>Recorte de sobre, logo GAIIA y PDF 2 por hoja (±45°).</p>
+          <div class="home-actions">
+            <button type="button" class="btn btn-nav-blue" id="btnGoEditCarta">Editar carta</button>
+            <button type="button" class="btn btn-nav-blue" id="btnGoPdfCarta">Armar PDF cartas</button>
+          </div>
+        </div>
+        <div class="home-block">
+          <h2>Postales</h2>
+          <p>Chica o grande, recuadro negro opcional y PDF en retícula.</p>
+          <div class="home-actions">
+            <button type="button" class="btn btn-nav-blue" id="btnGoEditPostal">Editar postal</button>
+            <button type="button" class="btn btn-nav-blue" id="btnGoPdfPostal">Armar PDF postales</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EDIT -->
+    <section id="view-edit" class="view">
+      <div class="editor-shell">
+        <div class="editor-top">
+          <div class="control-group">
+            <button type="button" class="btn" id="btnAddText">Añadir texto</button>
+            <button type="button" class="btn" id="btnDeleteText">Borrar texto</button>
+          </div>
+          <div class="control-group">
+            <label for="textContent">Texto</label>
+            <input type="text" id="textContent" placeholder="Escribe aquí" style="min-width:140px" />
+          </div>
+          <div class="control-group">
+            <label for="fontSelect">Fuente</label>
+            <select id="fontSelect"></select>
+          </div>
+          <div class="control-group">
+            <label for="fontSize">Tamaño</label>
+            <input type="number" id="fontSize" min="12" max="240" value="72" style="width:72px" />
+          </div>
+          <div class="control-group">
+            <label for="textColor">Color</label>
+            <input type="color" id="textColor" value="#ffffff" />
+          </div>
+          <div class="control-group">
+            <label><input type="checkbox" id="textBold" /> Negrita</label>
+          </div>
+          <div class="control-group postal-only" id="postalSizeGroup" hidden>
+            <span class="product-badge product-badge-active" id="postalModeLabel">Trabajando: Postal chica</span>
+            <button type="button" class="btn btn-nav-blue" id="btnPostalSize">Cambiar a grande</button>
+          </div>
+          <div class="nav-actions">
+            <button type="button" class="btn btn-nav-blue" id="btnGoPdfFromEdit">Armar PDF</button>
+            <button type="button" class="btn btn-nav-home" id="btnBackHome1">Inicio</button>
+          </div>
+        </div>
+
+        <div class="editor-main">
+          <div class="canvas-wrap">
+            <canvas id="editCanvas" aria-label="Editor de recorte"></canvas>
+          </div>
+        </div>
+
+        <aside class="editor-side">
+          <p class="hint" id="sideHintCoverage">Cyan = fuera del corte. Magenta = hueco sin cubrir cuando hay foto. El PNG sale limpio.</p>
+          <p class="hint" id="sideHintProduct">Simétrico liga Ancho y Alto. Deformar los deja independientes.</p>
+        </aside>
+
+        <div class="editor-bottom">
+          <button type="button" class="btn btn-primary" id="btnChooseImage">Elegir imagen</button>
+          <span class="product-badge" id="productBadge">Carta</span>
+
+          <div class="control-group carta-only" id="cartaLogoGroup">
+            <button type="button" class="btn" id="btnLogo">Logo</button>
+            <label for="logoMode">N/B</label>
+            <select id="logoMode">
+              <option value="black">Negro</option>
+              <option value="white">Blanco</option>
+            </select>
+          </div>
+
+          <div class="control-group postal-only" id="postalFrameGroup" hidden>
+            <button type="button" class="btn" id="btnFrame">Recuadro</button>
+          </div>
+
+          <div class="control-group">
+            <button type="button" class="btn btn-primary" id="btnSymetric">Simétrico</button>
+            <button type="button" class="btn" id="btnDeform">Deformar</button>
+          </div>
+          <div class="control-group">
+            <label for="widthRange">Ancho %</label>
+            <input type="range" id="widthRange" min="25" max="300" step="1" value="100" style="width:100px" />
+            <input type="number" id="widthValue" min="25" max="300" value="100" style="width:64px" />
+          </div>
+          <div class="control-group">
+            <label for="heightRange">Alto %</label>
+            <input type="range" id="heightRange" min="25" max="300" step="1" value="100" style="width:100px" disabled />
+            <input type="number" id="heightValue" min="25" max="300" value="100" style="width:64px" disabled />
+          </div>
+          <div class="control-group">
+            <label for="rotationRange">Rotación °</label>
+            <input type="range" id="rotationRange" min="-180" max="180" step="1" value="0" style="width:120px" />
+            <input type="number" id="rotationValue" min="-180" max="180" value="0" style="width:64px" />
+          </div>
+          <button type="button" class="btn btn-primary" id="btnExportPng">Guardar PNG</button>
+          <button type="button" class="btn" id="btnClearEditor">Limpiar</button>
+          <span class="hint" id="editStatus">Sin imagen</span>
+          <input type="file" id="fileImage" class="hidden-file" accept="image/jpeg,image/png,image/webp,image/*" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ASSEMBLE CARTA -->
+    <section id="view-assemble-carta" class="view">
+      <div class="assemble-bar">
+        <div class="nav-actions" style="margin-left:0;border-left:0;padding-left:0">
+          <button type="button" class="btn btn-nav-blue" id="btnGoEditFromPdfCarta">Editar carta</button>
+          <button type="button" class="btn btn-nav-home" id="btnBackHomeCarta">Inicio</button>
+        </div>
+        <button type="button" class="btn btn-primary" id="btnLoadPiecesCarta">Cargar imágenes</button>
+        <button type="button" class="btn" id="btnClearPiecesCarta">Vaciar</button>
+        <button type="button" class="btn btn-primary" id="btnBuildPdfCarta" disabled>Vista previa</button>
+        <span class="hint" id="assembleHintCarta">Carga PNG de cartas (GAIIA-S-…). 2 por hoja.</span>
+        <input type="file" id="filePiecesCarta" class="hidden-file" accept="image/png,image/*" multiple />
+      </div>
+      <div class="thumb-grid" id="thumbGridCarta"></div>
+    </section>
+
+    <!-- ASSEMBLE POSTAL -->
+    <section id="view-assemble-postal" class="view">
+      <div class="assemble-bar">
+        <div class="nav-actions" style="margin-left:0;border-left:0;padding-left:0">
+          <button type="button" class="btn btn-nav-blue" id="btnGoEditFromPdfPostal">Editar postal</button>
+          <button type="button" class="btn btn-nav-home" id="btnBackHomePostal">Inicio</button>
+        </div>
+        <button type="button" class="btn btn-primary" id="btnAddPostalChica">Agregar postal chica</button>
+        <button type="button" class="btn btn-primary" id="btnAddPostalGrande">Agregar postal grande</button>
+        <button type="button" class="btn" id="btnClearPiecesPostal">Vaciar</button>
+        <button type="button" class="btn btn-primary" id="btnBuildPdfPostal" disabled>Vista previa</button>
+        <span class="hint" id="assembleHintPostal">A4 · Cantidad = piezas de cada imagen (9 chica / 7 grande = 1 fila). Calle de corte entre columnas.</span>
+        <input type="file" id="filePiecesPostalChica" class="hidden-file" accept="image/png,image/*" multiple />
+        <input type="file" id="filePiecesPostalGrande" class="hidden-file" accept="image/png,image/*" multiple />
+      </div>
+      <div class="thumb-grid" id="thumbGridPostal"></div>
+    </section>
+
+    <!-- PDF PREVIEW (shared) -->
+    <div id="pdfPreviewPanel" class="pdf-preview-panel" hidden>
+      <div class="pdf-preview-bar">
+        <button type="button" class="btn" id="btnPdfPreviewClose">Cerrar</button>
+        <button type="button" class="btn" id="btnPdfPreviewPrev">Anterior</button>
+        <button type="button" class="btn" id="btnPdfPreviewNext">Siguiente</button>
+        <span class="hint" id="pdfPreviewHint">Página 0 de 0</span>
+        <button type="button" class="btn btn-primary" id="btnPdfPreviewDownload">Descargar PDF</button>
+      </div>
+      <div class="pdf-preview-stage" id="pdfPreviewStage">
+        <img id="pdfPreviewPage" alt="Vista previa de página" />
+      </div>
+      <div class="pdf-preview-thumbs" id="pdfPreviewThumbs"></div>
+    </div>
+
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="js/names.js?v=13"></script>
+    <script src="js/editor.js?v=14"></script>
+    <script src="js/pdfAssembler.js?v=17"></script>
+    <script src="js/app.js?v=13"></script>
+  </body>
+</html>
