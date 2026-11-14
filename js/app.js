@@ -53,7 +53,7 @@
 
   async function boot() {
     await EvoEditor.init();
-    const sobre = await fetch("templates/sobre/layout.json?v=13").then((r) => r.json());
+    const sobre = await fetch("templates/sobre/layout.json?v=20").then((r) => r.json());
     await EvoPdf.initCarta(sobre);
     await EvoPdf.initPostal();
 

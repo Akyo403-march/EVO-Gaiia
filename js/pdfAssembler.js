@@ -1,6 +1,11 @@
-/** PDF: cartas (slots ±45°) y postales A4 con cantidad por diseño + hoja mixta. */
+/** PDF: cartas (+ postales en huecos) y postales A4. */
 (function () {
-  const carta = { layout: null, files: [] };
+  const carta = {
+    layout: null,
+    files: [],
+    /** @type {{ size: 'chica'|'grande', name: string, dataUrl: string, img: HTMLImageElement }[]} */
+    postalFiles: [],
+  };
   const postal = {
     layoutChica: null,
     layoutGrande: null,
@@ -62,7 +67,7 @@
   }
 
   async function fetchLayout(productId) {
-    return fetch(`templates/${productId}/layout.json?v=17`).then((r) => r.json());
+    return fetch(`templates/${productId}/layout.json?v=20`).then((r) => r.json());
   }
 
   function blockFor(size) {
@@ -97,12 +102,6 @@
     const capG = (blockG?.rows || 6) * (blockG?.cols || 7);
     const nC = totalQty("chica");
     const nG = totalQty("grande");
-    const pages = Math.max(
-      nC ? Math.ceil(nC / capC) : 0,
-      nG ? Math.ceil(nG / capG) : 0,
-      nC || nG ? 1 : 0
-    );
-    // Mixed pages: one page takes min(capC, remaining C) and min(capG, remaining G)
     let remC = nC;
     let remG = nG;
     let mixedPages = 0;
@@ -111,13 +110,7 @@
       remC = Math.max(0, remC - capC);
       remG = Math.max(0, remG - capG);
     }
-    return {
-      capC,
-      capG,
-      nC,
-      nG,
-      pages: mixedPages || pages,
-    };
+    return { capC, capG, nC, nG, pages: mixedPages };
   }
 
   function invalidatePreview() {
@@ -143,6 +136,72 @@
     $("btnPdfPreviewDownload").addEventListener("click", downloadCurrentPreview);
   }
 
+  /* ---- Carta blank packs ---- */
+
+  function resolvePackMode() {
+    const hasC = carta.postalFiles.some((f) => f.size === "chica");
+    const hasG = carta.postalFiles.some((f) => f.size === "grande");
+    if (hasC && hasG) return "mixed";
+    if (hasG) return "grandeOnly";
+    if (hasC) return "chicaOnly";
+    return null;
+  }
+
+  function pageKindsForCartas(n) {
+    const kinds = [];
+    for (let i = 0; i < n; i += 2) {
+      kinds.push(i + 1 < n ? "two" : "one");
+    }
+    return kinds;
+  }
+
+  function blankCellsFor(pageKind, mode) {
+    const packs = carta.layout?.blankPacks;
+    if (!packs || !mode) return [];
+    const page = packs[pageKind];
+    return (page && page[mode]) || [];
+  }
+
+  function capacityForCartas(mode) {
+    if (!mode || !carta.files.length) {
+      return { capC: 0, capG: 0, pages: 0, kinds: [] };
+    }
+    const kinds = pageKindsForCartas(carta.files.length);
+    let capC = 0;
+    let capG = 0;
+    kinds.forEach((kind) => {
+      blankCellsFor(kind, mode).forEach((c) => {
+        if (c.size === "chica") capC++;
+        else if (c.size === "grande") capG++;
+      });
+    });
+    return { capC, capG, pages: kinds.length, kinds };
+  }
+
+  /** Equitable qty list for designs of one size given capacity. */
+  function equitableQtys(designCount, capacity) {
+    if (designCount <= 0 || capacity <= 0) return [];
+    const base = Math.floor(capacity / designCount);
+    let rem = capacity % designCount;
+    const out = [];
+    for (let i = 0; i < designCount; i++) {
+      out.push(base + (rem > 0 ? 1 : 0));
+      if (rem > 0) rem--;
+    }
+    return out;
+  }
+
+  function expandCartaPostales(size, capacity) {
+    const designs = carta.postalFiles.filter((f) => f.size === size);
+    const qtys = equitableQtys(designs.length, capacity);
+    const out = [];
+    designs.forEach((f, i) => {
+      const q = qtys[i] || 0;
+      for (let k = 0; k < q; k++) out.push(f.img);
+    });
+    return out;
+  }
+
   async function initCarta(layout) {
     carta.layout = layout;
     bindPreviewControls();
@@ -158,13 +217,49 @@
       e.target.value = "";
       invalidatePreview();
       renderThumbsCarta();
+      renderThumbsCartaPostal();
     });
     $("btnClearPiecesCarta").addEventListener("click", () => {
       carta.files = [];
       invalidatePreview();
       renderThumbsCarta();
+      renderThumbsCartaPostal();
     });
+
+    $("btnAddCartaPostalChica").addEventListener("click", () =>
+      $("fileCartaPostalChica").click()
+    );
+    $("btnAddCartaPostalGrande").addEventListener("click", () =>
+      $("fileCartaPostalGrande").click()
+    );
+    $("fileCartaPostalChica").addEventListener("change", (e) =>
+      onCartaPostalFiles(e, "chica")
+    );
+    $("fileCartaPostalGrande").addEventListener("change", (e) =>
+      onCartaPostalFiles(e, "grande")
+    );
+    $("btnClearCartaPostales").addEventListener("click", () => {
+      carta.postalFiles = [];
+      invalidatePreview();
+      renderThumbsCartaPostal();
+    });
+
     $("btnBuildPdfCarta").addEventListener("click", openPreviewCarta);
+    renderThumbsCarta();
+    renderThumbsCartaPostal();
+  }
+
+  async function onCartaPostalFiles(e, size) {
+    const list = Array.from(e.target.files || []);
+    for (const file of list) {
+      if (!file.type.startsWith("image/")) continue;
+      const dataUrl = await readFile(file);
+      const img = await loadImage(dataUrl);
+      carta.postalFiles.push({ size, name: file.name, dataUrl, img });
+    }
+    e.target.value = "";
+    invalidatePreview();
+    renderThumbsCartaPostal();
   }
 
   async function initPostal() {
@@ -212,6 +307,39 @@
     renderThumbsPostal();
   }
 
+  function updateCartaHint() {
+    const hint = $("assembleHintCarta");
+    if (!hint) return;
+    const n = carta.files.length;
+    if (!n) {
+      hint.textContent =
+        "Carga cartas (GAIIA-S-…). Luego postales para rellenar huecos (sin cantidad: se reparte sola).";
+      return;
+    }
+    const pages = Math.ceil(n / 2);
+    const mode = resolvePackMode();
+    if (!mode) {
+      hint.textContent = `${n} carta(s) · ${pages} hoja(s). Agrega postales chica/grande para rellenar huecos.`;
+      return;
+    }
+    const { capC, capG } = capacityForCartas(mode);
+    const nC = carta.postalFiles.filter((f) => f.size === "chica").length;
+    const nG = carta.postalFiles.filter((f) => f.size === "grande").length;
+    const parts = [`${n} carta(s) · ${pages} hoja(s)`];
+    if (mode === "chicaOnly") {
+      parts.push(`huecos: ${capC} chicas`);
+      parts.push(`${nC} diseño(s) → ~${nC ? Math.floor(capC / nC) : 0} c/u`);
+    } else if (mode === "grandeOnly") {
+      parts.push(`huecos: ${capG} grandes`);
+      parts.push(`${nG} diseño(s) → ~${nG ? Math.floor(capG / nG) : 0} c/u`);
+    } else {
+      parts.push(`huecos: ${capC} chicas + ${capG} grandes`);
+      if (nC) parts.push(`${nC} chica(s) → ~${Math.floor(capC / nC)} c/u`);
+      if (nG) parts.push(`${nG} grande(s) → ~${Math.floor(capG / nG)} c/u`);
+    }
+    hint.textContent = parts.join(" · ");
+  }
+
   function renderThumbsCarta() {
     const grid = $("thumbGridCarta");
     grid.innerHTML = "";
@@ -224,14 +352,43 @@
         carta.files.splice(i, 1);
         invalidatePreview();
         renderThumbsCarta();
+        renderThumbsCartaPostal();
       });
       grid.appendChild(div);
     });
-    $("btnBuildPdfCarta").disabled = carta.files.length === 0;
-    $("assembleHintCarta").textContent =
-      carta.files.length === 0
-        ? "Carga PNG de cartas (GAIIA-S-…). 2 por hoja."
-        : `${carta.files.length} imagen(es) · ${Math.ceil(carta.files.length / 2)} página(s)`;
+    const hasCartas = carta.files.length > 0;
+    $("btnBuildPdfCarta").disabled = !hasCartas;
+    const addC = $("btnAddCartaPostalChica");
+    const addG = $("btnAddCartaPostalGrande");
+    const clearP = $("btnClearCartaPostales");
+    if (addC) addC.disabled = !hasCartas;
+    if (addG) addG.disabled = !hasCartas;
+    if (clearP) clearP.disabled = !carta.postalFiles.length;
+    updateCartaHint();
+  }
+
+  function renderThumbsCartaPostal() {
+    const grid = $("thumbGridCartaPostal");
+    const heading = $("cartaPostalHeading");
+    if (!grid) return;
+    grid.innerHTML = "";
+    if (heading) heading.hidden = carta.postalFiles.length === 0;
+    carta.postalFiles.forEach((f, i) => {
+      const div = document.createElement("div");
+      div.className = "thumb";
+      const label = f.size === "grande" ? "Grande" : "Chica";
+      div.innerHTML = `<span class="idx">${label}</span><img alt=""><button type="button">Quitar</button>`;
+      div.querySelector("img").src = f.dataUrl;
+      div.querySelector("button").addEventListener("click", () => {
+        carta.postalFiles.splice(i, 1);
+        invalidatePreview();
+        renderThumbsCartaPostal();
+      });
+      grid.appendChild(div);
+    });
+    const clearP = $("btnClearCartaPostales");
+    if (clearP) clearP.disabled = !carta.postalFiles.length || !carta.files.length;
+    updateCartaHint();
   }
 
   function renderThumbsPostal() {
@@ -309,7 +466,22 @@
     return rotated;
   }
 
-  function renderCartaPage(imgs) {
+  function drawInCells(ctx, cells, imgs) {
+    const n = Math.min(cells.length, imgs.length);
+    for (let i = 0; i < n; i++) {
+      const img = imgs[i];
+      const cell = cells[i];
+      if (!img || !cell) continue;
+      const fit = Math.min(cell.w / img.naturalWidth, cell.h / img.naturalHeight);
+      const dw = img.naturalWidth * fit;
+      const dh = img.naturalHeight * fit;
+      const x = cell.x + (cell.w - dw) / 2;
+      const y = cell.y + (cell.h - dh) / 2;
+      ctx.drawImage(img, x, y, dw, dh);
+    }
+  }
+
+  function renderCartaPage(imgs, blankCells, chicaImgs, grandeImgs) {
     const layout = carta.layout;
     const pw = layout.page.widthPx;
     const ph = layout.page.heightPx;
@@ -328,6 +500,16 @@
       const { cx, cy } = opaqueCentroid(rotated);
       ctx.drawImage(rotated, slot.centerX - cx, slot.centerY - cy);
     });
+    if (blankCells && blankCells.length) {
+      const chCells = blankCells.filter((c) => c.size === "chica");
+      const grCells = blankCells.filter((c) => c.size === "grande");
+      if (chCells.length && chicaImgs && chicaImgs.length) {
+        drawInCells(ctx, chCells, chicaImgs);
+      }
+      if (grCells.length && grandeImgs && grandeImgs.length) {
+        drawInCells(ctx, grCells, grandeImgs);
+      }
+    }
     return canvas;
   }
 
@@ -343,22 +525,6 @@
     return { canvas, ctx };
   }
 
-  function drawInCells(ctx, cells, imgs) {
-    const n = Math.min(cells.length, imgs.length);
-    for (let i = 0; i < n; i++) {
-      const img = imgs[i];
-      const cell = cells[i];
-      if (!img || !cell) continue;
-      const fit = Math.min(cell.w / img.naturalWidth, cell.h / img.naturalHeight);
-      const dw = img.naturalWidth * fit;
-      const dh = img.naturalHeight * fit;
-      const x = cell.x + (cell.w - dw) / 2;
-      const y = cell.y + (cell.h - dh) / 2;
-      ctx.drawImage(img, x, y, dw, dh);
-    }
-  }
-
-  /** Expand queue items into individual piece images by qty. */
   function expandPieces(size) {
     const out = [];
     postal.files.forEach((f) => {
@@ -370,17 +536,32 @@
   }
 
   function buildCartaPages() {
+    const mode = resolvePackMode();
+    const { capC, capG, kinds } = capacityForCartas(mode);
+    let chicaQ = mode ? expandCartaPostales("chica", capC) : [];
+    let grandeQ = mode ? expandCartaPostales("grande", capG) : [];
+
     const pages = [];
     for (let i = 0; i < carta.files.length; i += 2) {
-      pages.push(renderCartaPage([carta.files[i]?.img, carta.files[i + 1]?.img]));
+      const pageIndex = pages.length;
+      const kind = kinds[pageIndex] || (i + 1 < carta.files.length ? "two" : "one");
+      const cells = mode ? blankCellsFor(kind, mode) : [];
+      const nC = cells.filter((c) => c.size === "chica").length;
+      const nG = cells.filter((c) => c.size === "grande").length;
+      const takeC = chicaQ.splice(0, nC);
+      const takeG = grandeQ.splice(0, nG);
+      pages.push(
+        renderCartaPage(
+          [carta.files[i]?.img, carta.files[i + 1]?.img],
+          cells,
+          takeC,
+          takeG
+        )
+      );
     }
     return pages;
   }
 
-  /**
-   * Mixed A4 pages (like postales.pdf): chica band top + grande band bottom.
-   * Pieces placed cell-by-cell according to each design's quantity.
-   */
   function buildPostalPages() {
     const layout = postal.layoutChica || postal.layoutGrande;
     const blockC = blockFor("chica");

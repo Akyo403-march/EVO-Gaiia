@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Dancing+Script:wght@400;700&family=IBM+Plex+Sans:wght@400;700&family=IBM+Plex+Serif:wght@400;700&family=Jost:wght@400;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css/app.css?v=15" />
+    <link rel="stylesheet" href="css/app.css?v=20" />
   </head>
   <body>
     <header class="app-header">
@@ -141,13 +141,20 @@
           <button type="button" class="btn btn-nav-blue" id="btnGoEditFromPdfCarta">Editar carta</button>
           <button type="button" class="btn btn-nav-home" id="btnBackHomeCarta">Inicio</button>
         </div>
-        <button type="button" class="btn btn-primary" id="btnLoadPiecesCarta">Cargar imágenes</button>
-        <button type="button" class="btn" id="btnClearPiecesCarta">Vaciar</button>
+        <button type="button" class="btn btn-primary" id="btnLoadPiecesCarta">Cargar cartas</button>
+        <button type="button" class="btn" id="btnClearPiecesCarta">Vaciar cartas</button>
+        <button type="button" class="btn btn-primary" id="btnAddCartaPostalChica" disabled>Agregar postal chica</button>
+        <button type="button" class="btn btn-primary" id="btnAddCartaPostalGrande" disabled>Agregar postal grande</button>
+        <button type="button" class="btn" id="btnClearCartaPostales" disabled>Vaciar postales</button>
         <button type="button" class="btn btn-primary" id="btnBuildPdfCarta" disabled>Vista previa</button>
-        <span class="hint" id="assembleHintCarta">Carga PNG de cartas (GAIIA-S-…). 2 por hoja.</span>
+        <span class="hint" id="assembleHintCarta">Carga cartas (GAIIA-S-…). Luego postales para rellenar huecos (sin cantidad: se reparte sola).</span>
         <input type="file" id="filePiecesCarta" class="hidden-file" accept="image/png,image/*" multiple />
+        <input type="file" id="fileCartaPostalChica" class="hidden-file" accept="image/png,image/*" multiple />
+        <input type="file" id="fileCartaPostalGrande" class="hidden-file" accept="image/png,image/*" multiple />
       </div>
       <div class="thumb-grid" id="thumbGridCarta"></div>
+      <h3 class="assemble-subhead" id="cartaPostalHeading" hidden>Postales en huecos</h3>
+      <div class="thumb-grid" id="thumbGridCartaPostal"></div>
     </section>
 
     <!-- ASSEMBLE POSTAL -->
@@ -184,9 +191,9 @@
     </div>
 
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <script src="js/names.js?v=13"></script>
-    <script src="js/editor.js?v=14"></script>
-    <script src="js/pdfAssembler.js?v=17"></script>
-    <script src="js/app.js?v=13"></script>
+    <script src="js/names.js?v=20"></script>
+    <script src="js/editor.js?v=20"></script>
+    <script src="js/pdfAssembler.js?v=20"></script>
+    <script src="js/app.js?v=20"></script>
   </body>
 </html>

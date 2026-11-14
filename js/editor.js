@@ -80,7 +80,7 @@
 
   async function loadProduct(productId) {
     const path = `templates/${productId}`;
-    const layout = await fetch(`${path}/layout.json?v=13`).then((r) => r.json());
+    const layout = await fetch(`${path}/layout.json?v=20`).then((r) => r.json());
     state.productId = productId;
     state.templatePath = path;
     state.layout = layout;
